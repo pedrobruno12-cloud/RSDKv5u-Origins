@@ -2,98 +2,56 @@ name: Build RSDKv5
 
 on: workflow_dispatch
 
-# each artifact is like 15MB so we'll start by only doing it manually
-# on:
-#   push:
-#     branches:
-#       - master
-
 # TODO: readd with: submodules: recursive once we can
 
 jobs:
-  v5-windows:
-    runs-on: windows-2022
-    defaults:
-      run:
-        shell: msys2 {0}
-    steps:
-      - name: Checkout 
-        uses: actions/checkout@v2
-        with:
-          submodules: recursive
-      - name: Setup MSYS2
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: MINGW32
-          update: true
-          install: pkg-config make git mingw-w64-i686-gcc mingw-w64-i686-libogg mingw-w64-i686-libtheora
-      - name: Build RSDKv5 + U
-        run: |
-          make -j8 RSDK_ONLY=1 AUTOBUILD=1
-          make -j8 clean-rsdk
-          make -j8 RSDK_ONLY=1 RSDK_REVISION=3 AUTOBUILD=1
-      - name: Move artifacts
-        run: |
-          mkdir artifacts
-          mv ./bin/Windows/DX9/*.exe ./artifacts
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v1.0.0
-        with:
-          name: v5-windows
-          path: artifacts
-  v5-windows-x64:
-    runs-on: windows-2022
-    defaults:
-      run:
-        shell: msys2 {0}
-    steps:
-      - name: Checkout 
-        uses: actions/checkout@v2
-        with:
-          submodules: recursive
-      - name: Setup MSYS2
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: MINGW64
-          update: true
-          install: pkg-config make git mingw-w64-x86_64-gcc mingw-w64-x86_64-SDL2 mingw-w64-x86_64-libogg mingw-w64-x86_64-libtheora
-      - name: Build RSDKv5 + U
-        run: |
-          make -j8 RSDK_ONLY=1 AUTOBUILD=1
-          make -j8 clean-rsdk
-          make -j8 RSDK_ONLY=1 RSDK_REVISION=3 AUTOBUILD=1
-      - name: Move artifacts
-        run: |
-          mkdir artifacts
-          mv ./bin/Windows/DX9/*.exe ./artifacts
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v1.0.0
-        with:
-          name: v5-windows-x64
-          path: artifacts
-  v5-linux:
+  v5-android:
+    name: Build (Android)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout 
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install libogg-dev libsdl2-dev libtheora-dev libglew-dev libglfw3-dev
-      - name: Build RSDKv5 + U OGL
-        run: |
-          make -j8 RSDK_ONLY=1 AUTOBUILD=1
-          make -j8 clean-rsdk
-          make -j8 RSDK_ONLY=1 RSDK_REVISION=3 AUTOBUILD=1
-      - name: Build RSDKv5 + U SDL2
-        run: |
-          make -j8 RSDK_ONLY=1 SUBSYSTEM=SDL2 AUTOBUILD=1
-          make -j8 clean-rsdk
-          make -j8 RSDK_ONLY=1 SUBSYSTEM=SDL2 RSDK_REVISION=3 AUTOBUILD=1
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v1.0.0
+
+      # 1. Configurar o Java (Necessário para as ferramentas do Android SDK/NDK)
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
-          name: v5-linux
-          path: bin/Linux
+          distribution: 'temurin'
+          java-version: '17'
+
+      # 2. Configurar o Android NDK (Responsável por compilar o C/C++ para Android)
+      - name: Setup Android NDK
+        id: setup-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r25c # Versão estável comum para projetos RSDK
+
+      # 3. Compilar o RSDKv5 + U para Android
+      - name: Build RSDKv5 + U
+        # Adicionado o parâmetro PLATFORM=Android (ou equivalente suportado pelo seu Makefile)
+        run: |
+          make -j8 RSDK_ONLY=1 AUTOBUILD=1 PLATFORM=Android
+          make -j8 clean-rsdk
+          make -j8 RSDK_ONLY=1 RSDK_REVISION=3 AUTOBUILD=1 PLATFORM=Android
+        env:
+          # Variáveis de ambiente para o Makefile localizar o NDK
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+          ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
+
+      # 4. Mover e organizar os binários gerados
+      - name: Move artifacts
+        run: |
+          mkdir artifacts
+          # Move as bibliotecas .so ou .apk geradas. 
+          # O caminho pode variar dependendo do Makefile do seu repositório (ex: bin/Android)
+          mv ./bin/Android/* ./artifacts/ || true
+
+      # 5. Disponibilizar o arquivo final para download
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: v5-android
+          path: artifacts
+          
