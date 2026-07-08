@@ -75,9 +75,16 @@ jobs:
       - name: Build Mania+RSDKv5 Android
         working-directory: ./android
         run: |
+          # Garante que o script tenha permissão para rodar no Linux do GitHub Actions
+          chmod +x gradlew
+          
+          # Compila a Revisão 3 (RSDKv5U)
           ./gradlew assemble --no-daemon -PABIFILTERS="armeabi-v7a;arm64-v8a" -PRETRO_DISABLE_PLUS -PRETRO_REVISION=3
           mv app/build/outputs/apk/release/*.apk rsdkv5u_mania.apk
+          
           ./gradlew clean
+          
+          # Compila a Revisão 2 (RSDKv5)
           ./gradlew assemble --no-daemon -PABIFILTERS="armeabi-v7a;arm64-v8a" -PRETRO_DISABLE_PLUS -PRETRO_REVISION=2
           mv app/build/outputs/apk/release/*.apk rsdkv5_mania.apk
 
