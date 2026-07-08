@@ -69,23 +69,28 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+
+      # --- ADICIONE ESTE PASSO AQUI ---
+      - name: Patch Windows-specific code for Android
+        run: |
+          # 1. Define MAX_PATH manualmente nos arquivos de armazenamento caso não exista (Android/Linux)
+          sed -i '1s/^/#ifndef MAX_PATH\n#define MAX_PATH 260\n#endif\n/' RSDKv5/RSDK/User/Steam/SteamStorage.hpp
+          sed -i '1s/^/#ifndef MAX_PATH\n#define MAX_PATH 260\n#endif\n/' RSDKv5/RSDK/User/EOS/EOSStorage.hpp
+          
+          # 2. Isola a inclusão da Shlwapi.h para que ela só seja lida se for Windows
+          sed -i 's/#include <Shlwapi.h>/#ifdef _WIN32\n#include <Shlwapi.h>\n#endif/g' RSDKv5/HiteModLoader.h
+
+      # --------------------------------
 
       - name: Build Mania+RSDKv5 Android
         working-directory: ./android
         run: |
-          # Garante que o script tenha permissão para rodar no Linux do GitHub Actions
           chmod +x gradlew
-          
-          # Compila a Revisão 3 (RSDKv5U)
           ./gradlew assemble --no-daemon -PABIFILTERS="armeabi-v7a;arm64-v8a" -PRETRO_DISABLE_PLUS -PRETRO_REVISION=3
           mv app/build/outputs/apk/release/*.apk rsdkv5u_mania.apk
-          
           ./gradlew clean
-          
-          # Compila a Revisão 2 (RSDKv5)
           ./gradlew assemble --no-daemon -PABIFILTERS="armeabi-v7a;arm64-v8a" -PRETRO_DISABLE_PLUS -PRETRO_REVISION=2
           mv app/build/outputs/apk/release/*.apk rsdkv5_mania.apk
 
