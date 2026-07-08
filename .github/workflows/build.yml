@@ -63,11 +63,12 @@ jobs:
           ln -s $PWD/RSDKv5-Example-Mods/ManiaTouchControls ./android/app/jni/MTC
           ln -s $PWD/RSDKv5-Example-Mods/UltrawideMania ./android/app/jni/UWM
 
-      - name: Set up JDK 21
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: '17'
           distribution: 'temurin'
+
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
